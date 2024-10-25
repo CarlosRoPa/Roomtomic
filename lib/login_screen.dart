@@ -1,18 +1,54 @@
+import 'dart:convert'; // Para decodificar y codificar datos JSON
 import 'package:flutter/material.dart';
-import 'register_screen.dart';  // Asegúrate de que la ruta del archivo esté correcta.
+import 'package:http/http.dart' as http; // Para realizar solicitudes HTTP
+import 'register_screen.dart'; // Importa la pantalla de registro
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
+
   @override
-  LoginScreenState createState() => LoginScreenState(); // Cambia el nombre de la clase del estado
+  LoginScreenState createState() => LoginScreenState();
 }
 
-class LoginScreenState extends State<LoginScreen> { // Haz la clase del estado pública
+class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _obscurePassword = true; // Variable para controlar la visibilidad de la contraseña
+  bool _obscurePassword = true;
 
-  // Expresión regular para validar la seguridad de la contraseña
-  final String passwordPattern = r'^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[$;._\-*]).{8,}$';
+  // Método para manejar la solicitud de login
+  Future<void> _login() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final response = await http.post(
+          Uri.parse('https://TU_API.com/login'), // Cambia la URL a tu API de login
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(<String, String>{
+            'username': _usernameController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          // Si el login es exitoso
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Inicio de sesión exitoso')),
+          );
+        } else {
+          // Si el login falla
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${response.body}')),
+          );
+        }
+      } catch (error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error de red: $error')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +64,9 @@ class LoginScreenState extends State<LoginScreen> { // Haz la clase del estado p
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                // Campo para Nombre de Usuario
+                // Campo para el nombre de usuario
                 TextFormField(
+                  controller: _usernameController,
                   decoration: const InputDecoration(
                     labelText: 'Nombre de Usuario',
                     border: OutlineInputBorder(),
@@ -38,16 +75,12 @@ class LoginScreenState extends State<LoginScreen> { // Haz la clase del estado p
                     if (value == null || value.isEmpty) {
                       return 'Por favor, introduce tu nombre de usuario';
                     }
-                    // Validación para permitir solo letras y números
-                    if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
-                      return 'El nombre de usuario solo puede contener letras y números';
-                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
 
-                // Campo para Contraseña
+                // Campo para la contraseña
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -56,58 +89,40 @@ class LoginScreenState extends State<LoginScreen> { // Haz la clase del estado p
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility // Ícono de ojo cerrado
-                            : Icons.visibility_off, // Ícono de ojo abierto
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() {
-                          _obscurePassword = !_obscurePassword; // Cambia el estado al presionar el ícono
+                          _obscurePassword = !_obscurePassword;
                         });
                       },
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor, introduce una contraseña';
-                    }
-                    // Validación de la contraseña según el patrón
-                    if (!RegExp(passwordPattern).hasMatch(value)) {
-                      return 'La contraseña debe tener al menos 1 número, 1 mayúscula, 1 minúscula y un símbolo dollar ;._-*';
+                      return 'Por favor, introduce tu contraseña';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
 
-                // Botón de Iniciar Sesión
+                // Botón para iniciar sesión
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      // Si el formulario es válido, puedes realizar acciones como el inicio de sesión
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Inicio de sesión exitoso')),
-                      );
-                    }
-                  },
+                  onPressed: _login,
                   child: const Text('Iniciar Sesión'),
                 ),
-                
                 const SizedBox(height: 20),
 
-                // Botón de Registrarse
+                // Botón para redirigir a la pantalla de registro
                 TextButton(
                   onPressed: () {
-                    // Navega a la pantalla de registro
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => RegisterScreen()),
+                      MaterialPageRoute(builder: (context) => const RegisterScreen()),
                     );
                   },
-                  child: const Text(
-                    '¿No tienes una cuenta? Regístrate aquí',
-                    style: TextStyle(color: Colors.blue),
-                  ),
+                  child: const Text('¿No tienes cuenta? Regístrate aquí'),
                 ),
               ],
             ),

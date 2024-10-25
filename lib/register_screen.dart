@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';  // Para decodificar las respuestas JSON
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -9,10 +11,14 @@ class RegisterScreen extends StatefulWidget {
 
 class RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _surnameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  // Variables para mostrar u ocultar las validaciones dinámicas
   bool showPasswordRules = false;
   bool showUsernameRules = false;
   bool showNameRules = false;
@@ -32,8 +38,50 @@ class RegisterScreenState extends State<RegisterScreen> {
       hasLowerCase = password.contains(RegExp(r'[a-z]'));
       hasNumber = password.contains(RegExp(r'[0-9]'));
       hasSpecialCharacter = password.contains(RegExp(r'[$;._\-*]'));
-      showPasswordRules = password.isNotEmpty; // Muestra las reglas si empieza a escribir
+      showPasswordRules = password.isNotEmpty;
     });
+  }
+
+  // Función para registrar al usuario en la API
+  Future<void> _register() async {
+    if (_formKey.currentState!.validate()) {
+      // Muestra un indicador de carga mientras se realiza la solicitud
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Procesando...')),
+      );
+
+      try {
+        final response = await http.post(
+          Uri.parse('URL_DE_TU_API/register'), // Reemplaza con la URL de tu API
+          headers: <String, String>{
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(<String, String>{
+            'username': _usernameController.text,
+            'name': _nameController.text,
+            'surname': _surnameController.text,
+            'phone': _phoneController.text,
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Registro exitoso')),
+          );
+          // Aquí puedes navegar a otra pantalla si lo deseas
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error en el registro')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error de conexión: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -52,6 +100,7 @@ class RegisterScreenState extends State<RegisterScreen> {
               children: <Widget>[
                 // Campo para Nombre de Usuario
                 TextFormField(
+                  controller: _usernameController,
                   decoration: const InputDecoration(
                     labelText: 'Nombre de Usuario',
                     border: OutlineInputBorder(),
@@ -65,7 +114,6 @@ class RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, introduce tu nombre de usuario';
                     }
-                    // Validación para permitir solo letras y números
                     if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
                       return 'El nombre de usuario solo puede contener letras y números';
                     }
@@ -75,7 +123,7 @@ class RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 10),
 
                 if (showUsernameRules)
-                  Text(
+                  const Text(
                     'El nombre de usuario solo puede contener letras y números.',
                     style: TextStyle(color: Colors.grey),
                   ),
@@ -83,20 +131,15 @@ class RegisterScreenState extends State<RegisterScreen> {
 
                 // Campo para Nombre
                 TextFormField(
+                  controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Nombre',
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      showNameRules = value.isNotEmpty;
-                    });
-                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, introduce tu nombre';
                     }
-                    // Validación para permitir solo letras
                     if (!RegExp(r'^[a-zA-Z]+$').hasMatch(value)) {
                       return 'El nombre solo puede contener letras';
                     }
@@ -105,29 +148,17 @@ class RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                if (showNameRules)
-                  Text(
-                    'El nombre solo puede contener letras.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                const SizedBox(height: 20),
-
-                // Campo para Apellidos (permitiendo espacios entre apellidos)
+                // Campo para Apellidos
                 TextFormField(
+                  controller: _surnameController,
                   decoration: const InputDecoration(
                     labelText: 'Apellidos',
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      showSurnameRules = value.isNotEmpty;
-                    });
-                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, introduce tus apellidos';
                     }
-                    // Validación para permitir letras y espacios
                     if (!RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
                       return 'Los apellidos solo pueden contener letras y espacios';
                     }
@@ -136,30 +167,18 @@ class RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                if (showSurnameRules)
-                  Text(
-                    'Los apellidos solo pueden contener letras y espacios.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                const SizedBox(height: 20),
-
                 // Campo para Teléfono
                 TextFormField(
+                  controller: _phoneController,
                   decoration: const InputDecoration(
                     labelText: 'Teléfono',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.phone,
-                  onChanged: (value) {
-                    setState(() {
-                      showPhoneRules = value.isNotEmpty;
-                    });
-                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, introduce tu número de teléfono';
                     }
-                    // Nueva validación para números de teléfono con o sin prefijo
                     if (!RegExp(r'^\+?[0-9]{7,15}$').hasMatch(value)) {
                       return 'Introduce un número de teléfono válido (7 a 15 dígitos)';
                     }
@@ -168,30 +187,18 @@ class RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                if (showPhoneRules)
-                  Text(
-                    'Introduce un número de teléfono válido (7 a 15 dígitos).',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                const SizedBox(height: 20),
-
                 // Campo para Correo Electrónico
                 TextFormField(
+                  controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: 'Correo Electrónico',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
-                  onChanged: (value) {
-                    setState(() {
-                      showEmailRules = value.isNotEmpty;
-                    });
-                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, introduce tu correo electrónico';
                     }
-                    // Nueva validación para correos electrónicos más flexible
                     if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value)) {
                       return 'Introduce un correo electrónico válido';
                     }
@@ -199,13 +206,6 @@ class RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 10),
-
-                if (showEmailRules)
-                  Text(
-                    'Introduce un correo electrónico válido.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                const SizedBox(height: 20),
 
                 // Campo para Contraseña
                 TextFormField(
@@ -225,7 +225,7 @@ class RegisterScreenState extends State<RegisterScreen> {
                       },
                     ),
                   ),
-                  onChanged: _validatePassword,  // Llama a _validatePassword en cada cambio
+                  onChanged: _validatePassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, introduce una contraseña';
@@ -272,13 +272,7 @@ class RegisterScreenState extends State<RegisterScreen> {
 
                 // Botón de registro
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Registro exitoso')),
-                      );
-                    }
-                  },
+                  onPressed: _register,
                   child: const Text('Registrarse'),
                 ),
               ],
